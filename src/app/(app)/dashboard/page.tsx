@@ -17,104 +17,100 @@ import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-const Page = ()=>{
+const Page = () => {
     const [messages, setMessages] = useState<Message[]>([]);
-    const[isLoading, setIsLoading] = useState<boolean>(false);
-    const[isSwitchLoading, setIsSwitchLoading] = useState<boolean>(false); 
+    const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [isSwitchLoading, setIsSwitchLoading] = useState<boolean>(false); 
+    const [profileUrl, setProfileUrl] = useState<string>('');
 
     const handleDeleteMessage = (messageId: string) => {
-        setMessages(messages.filter((message)=> message._id !== messageId));
+        setMessages(messages.filter((message) => message._id !== messageId));
     }
 
     const {data: session} = useSession();
 
     const form = useForm({
         resolver: zodResolver(AcceptMessageSchema)
-
-    })
+    });
 
     const {register, watch, setValue} = form;
 
     const acceptMessages = watch('acceptMessages');
 
-    const fetchAcceptMessages = useCallback(async()=>{
+    const fetchAcceptMessages = useCallback(async() => {
         setIsLoading(true);
-        try{
+        try {
             const response = await axios.get<ApiResponse>("/api/accept-messages");
             setValue('acceptMessages', response.data.isAcceptingMessages || false);
-        } catch(err){
+        } catch(err) {
             const axiosError = err as AxiosError<ApiResponse>;
             toast.error(axiosError.response?.data.message || "Failed to fetch accept messages");           
-
-        }
-
-        finally{
+        } finally {
             setIsLoading(false);
         }
-    }, [setValue])
+    }, [setValue]);
 
-    const fetchMesssages = useCallback(async(refresh: boolean = false)=>{ //default value of refresh is false
+    const fetchMesssages = useCallback(async(refresh: boolean = false) => {
         setIsLoading(true);
         setIsSwitchLoading(false);
 
-        try{
+        try {
             const response = await axios.get<ApiResponse>("/api/get-messages");
             setMessages(response.data.messages || []);
 
-            if(refresh){
+            if(refresh) {
                 toast.success("Messages refreshed successfully");
             }
-
-        } catch(error){
+        } catch(error) {
             const axiosError = error as AxiosError<ApiResponse>;
             toast.error(axiosError.response?.data.message || "Failed to fetch messages");
-        }
-        finally{
+        } finally {
             setIsLoading(false);
             setIsSwitchLoading(false);
         }
-    }, [setIsLoading, setMessages])
+    }, [setIsLoading, setMessages]);
 
-    useEffect(()=>{
-        if(!session || !session.user) return
+    useEffect(() => {
+        if(!session || !session.user) return;
         fetchMesssages();
         fetchAcceptMessages();
+        
+        // Only set the profileUrl when running in the browser
+        if (typeof window !== 'undefined') {
+            const { username } = session.user as User;
+            const baseUrl = `${window.location.protocol}//${window.location.host}`;
+            setProfileUrl(`${baseUrl}/u/${username}`);
+        }
     }, [session, setValue, fetchAcceptMessages, fetchMesssages]);
 
-    //handle switch change
-
-    const handleSwitchChange = async()=>{
-        try{
+    const handleSwitchChange = async() => {
+        try {
             const response = await axios.post<ApiResponse>("/api/accept-messages", {
                 acceptMessages: !acceptMessages
-            })
-            setValue('acceptMessages', !acceptMessages );
+            });
+            setValue('acceptMessages', !acceptMessages);
             toast.success(response.data.message);
-
-        } catch(error){
+        } catch(error) {
             const axiosError = error as AxiosError<ApiResponse>;
             toast.error(axiosError.response?.data.message || "Failed to update accept messages");
         }
     }
 
-    const {username } = session?.user as User || '  ';
-    const baseUrl = `${window.location.protocol}//${window.location.host}`;
-
-    const profileUrl = `${baseUrl}/u/${username}`;
-
-    const copyToClipboard = async()=>{
-        await navigator.clipboard.writeText(profileUrl);
-        toast.success("Profile URL copied to clipboard");
+    const copyToClipboard = async() => {
+        if (typeof navigator !== 'undefined') {
+            await navigator.clipboard.writeText(profileUrl);
+            toast.success("Profile URL copied to clipboard");
+        }
     }
 
-    if(!session || !session.user){
-        return(
+    if(!session || !session.user) {
+        return (
           <div className="flex items-center justify-center min-h-screen bg-gray-100">
-          <h1 className="text-4xl font-bold text-gray-800">You are not logged in</h1>
-        </div>
-        
-        )
+            <h1 className="text-4xl font-bold text-gray-800">You are not logged in</h1>
+          </div>
+        );
     }
+    
     return (
         <div className="my-8 mx-4 md:mx-8 lg:mx-auto p-6 bg-white rounded w-full max-w-6xl">
           <h1 className="text-4xl font-bold mb-4">User Dashboard</h1>
@@ -163,7 +159,7 @@ const Page = ()=>{
             {messages.length > 0 ? (
               messages.map((message) => (
                 <MessageCard
-                  key={message._id as string} // key is for iteration in map function
+                  key={message._id as string}
                   message={message}
                   onMessageDelete={handleDeleteMessage}
                 />
@@ -173,8 +169,7 @@ const Page = ()=>{
             )}
           </div>
         </div>
-      );
-    
+    );
 }
 
 export default Page;
