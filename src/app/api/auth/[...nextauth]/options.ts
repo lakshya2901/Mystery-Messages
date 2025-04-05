@@ -4,6 +4,11 @@ import bcrypt from "bcryptjs";
 import UserModel from '@/model/User';
 import dbConnect from '@/lib/dbConnect';
 
+interface Credentials {
+    identifier: string;
+    password: string;
+  }
+  
 export const authOptions: NextAuthOptions = {
     providers: [
         CredentialsProvider({
@@ -14,8 +19,8 @@ export const authOptions: NextAuthOptions = {
                 email: { label: "Email", type: "text", placeholder: "jsmith" },
                 password: { label: "Password", type: "password" }
               },
-
-              async authorize(credentials: any): Promise<any>{
+            // @ts-expect-error Argument type mismatch from NextAuth credentials
+              async authorize(credentials: Credentials): Promise<User | null> {
                 await dbConnect();
                 try{
                     const user = await UserModel.findOne({

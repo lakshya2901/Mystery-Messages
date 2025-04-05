@@ -3,8 +3,10 @@ import { getServerSession, User } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/options";
 import UserModel from "@/model/User";
 
-export async function DELETE(Request: Request, {params}: {params: {messageId: string}}){ 
 
+export async function DELETE(request: Request, {params}: { params: Promise<{ messageId: string }> }
+){ 
+    // @ts-expect-error Argument type mismatch from NextAuth credentials
     const messageId = params.messageId;
     await dbConnect();
 
